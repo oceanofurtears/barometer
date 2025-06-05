@@ -22,7 +22,7 @@ python3 -m venv .venv
 4. Активация виртуального окружения
 
 ```bash
-.venv/Scripts/activate
+.venv\Scripts\activate
 ```
 
 5. Установка зависимостей
