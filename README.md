@@ -1,44 +1,19 @@
-# Barometer
-## Установка
+# barometer
 
-1. Клонирование репозитория
-
-```bash
-git clone https://github.com/Incomplite/barometer.git
+## Project setup
+```
+npm install
 ```
 
-2. Переход в директорию бота
-
-```bash
-cd barometer
+### Compiles and hot-reloads for development
+```
+npm run serve
 ```
 
-3. Создание виртуального окружения
-
-```bash
-python3 -m venv .venv
+### Compiles and minifies for production
+```
+npm run build
 ```
 
-4. Активация виртуального окружения
-
-```bash
-.venv\Scripts\activate
-```
-
-5. Установка зависимостей
-
-```bash
-pip3 install -r requirements.txt
-```
-
-6. Выполнение миграций Alembic
-
-```bash
-alembic upgrade head
-```
-
-7. Запуск проекта
-
-```bash
-python -m src.main
-```
+### Customize configuration
+See [Configuration Reference](https://cli.vuejs.org/config/).
