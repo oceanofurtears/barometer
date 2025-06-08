@@ -1,20 +1,30 @@
 <template>
     <div style="display: flex; justify-content: center; background-color: #181818; height: 100vh;">
-        <div class="home">
+        <div v-if="isLoading" class="loader-container">
+            <div class="spinner"></div>
+        </div>
+
+        <div v-else class="home">
             <!-- Поиск и фильтры -->
             <div class="search-bar">
                 <div style="display: flex;">
-                    <input type="text" placeholder="Что пробуем сегодня?" class="search-input" />
+                    <input
+                        v-model="searchQuery"
+                        type="text"
+                        placeholder="Что пробуем сегодня?"
+                        class="search-input"
+                    />
                     <div class="actions">
-                        <button @click="showTagModal = true">⚙️</button>
-                        <button @click="showMapModal = true">🗺️</button>
+                        <button @click="showTagModal = true"><img src="https://i.imgur.com/JLIDEUd.png" alt="Настройки" class="btn-icon"/></button>
+                        <button @click="showMapModal = true"><img src="https://i.imgur.com/81BknL0.png" alt="Настройки" class="btn-icon"/></button>
                     </div>
                 </div>
                 <!-- Селектор города -->
                 <div class="city-selector">
-                    <span @click="toggleCityDropdown">
-                        <strong>{{ selectedCity }}</strong>
-                    </span>
+                    <div @click="toggleCityDropdown" style="display: flex;">
+                        <img src="https://i.imgur.com/9WAJRUL.png" alt="Настройки" class="btn-icon" style="height: 18px; margin-top: 0px;"/>
+                        <strong style="margin-top: 2px;">{{ selectedCity }}</strong>
+                    </div>
                     <div v-if="showCityDropdown" class="city-dropdown">
                         <div
                         v-for="city in cities"
@@ -34,26 +44,42 @@
             <!-- Список баров -->
             <div class="bar-container">
                 <div class="bar-list">
-                    <div v-for="bar in bars" :key="bar.id" class="bar-card">
-                        <div class="bar-images" style="display: flex; padding-right: 8px;">
-                            <img :src="bar.gallery?.[0]?.image_url || placeholder" alt="Bar Image" class="bar-img-main"/>
+                    <div v-for="bar in filteredBars" :key="bar.id" class="bar-card">
+                        <div class="bar-images" 
+                            style="display: flex; 
+                            padding-right: 8px;"
+                            @click="openImageModal(bar.gallery)"
+                        >
+                            <img :src="bar.gallery?.[0]?.image_url || placeholder" alt="Bar Image" class="bar-img-main" style="margin-right: 4px;"/>
                             <div style="margin-top: 8px;">
-                                <img :src="bar.gallery?.[1]?.image_url || placeholder" alt="Bar Image" class="bar-img-sec"/>
-                                <img :src="bar.gallery?.[2]?.image_url || placeholder" alt="Bar Image" class="bar-img-sec"/>
+                                <img :src="bar.gallery?.[1]?.image_url || placeholder" alt="Bar Image" class="bar-img-sec" style="border-top-right-radius: 8px;"/>
+                                <img :src="bar.gallery?.[2]?.image_url || placeholder" alt="Bar Image" class="bar-img-sec" style="border-bottom-right-radius: 8px;"/>
                             </div>
                         </div>
                         <div class="bar-info">
                             <div style="display: flex; justify-content: space-between;">
-                                <h3>{{ bar.name }}</h3>
+                                <h3 class="bar-name" @click="goToBar(bar.id)" style="cursor: pointer;">
+                                    {{ bar.name }}
+                                </h3>
                                 <div style="display: flex;">
                                     <button class="favorite-btn" @click="toggleFavorite(bar)">
-                                        {{ bar.isFavorite ? '★' : '☆' }}
+                                        <img
+                                            :src="bar.isFavorite ? 'https://i.imgur.com/TEyH0yT.png' : 'https://i.imgur.com/hOQA38l.png'"
+                                            alt="favorite"
+                                            class="btn-icon"
+                                            style="width: 30px; height: 30px;"
+                                        />
                                     </button>
-                                    <span class="rating">⭐ {{ bar.rating ?? '—' }}</span>
+                                    <div class="rating">
+                                        <img src="https://i.imgur.com/qx5kdDU.png" alt="Настройки" class="btn-icon" style="width: 18px; height: 18px; margin-top: 3px;"/> 
+                                        <div style="margin-left: 4px; margin-top: 3px;">{{ bar.rating ?? '—' }}</div>
+                                    </div>
                                 </div>
                                 
                             </div>
-                            <p class="bar-description">{{ bar.description }}</p>
+                            <p class="bar-description" @click="goToBar(bar.id)" style="cursor: pointer;">
+                                {{ bar.description }}
+                            </p>
 
                             <!-- Горизонтальная галерея коктейлей -->
                             <div class="cocktail-gallery" v-if="bar.cocktails?.length">
@@ -104,14 +130,39 @@
         <!-- <button @click="showMapModal = false">Закрыть</button> -->
       </div>
     </div>
+
+    <!-- Попап галереии -->
+    <div
+        v-if="showImageModal"
+        class="image-modal-overlay"
+        @click.self="closeImageModal"
+    >
+        <div class="image-modal-content">
+            <button class="close-btn" @click="closeImageModal">×</button>
+
+            <!-- Сетка Masonry -->
+            <div class="masonry-gallery">
+                <img
+                    v-for="(img, i) in modalImages"
+                    :key="i"
+                    :src="img.image_url"
+                    alt="Bar photo"
+                />
+            </div>
+        </div>
+    </div>
   
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import axios from 'axios'
 
+const router = useRouter()
+
 const bars = ref([])
+const searchQuery = ref('')
 const favoriteIds = ref([])
 const selectedTags = ref([])
 const allTags = ['вино', 'коктейли', 'диджей', 'панорама', 'craft', 'classic', 'лонг', 'шот', 'пиво']
@@ -123,47 +174,77 @@ const showCityDropdown = ref(false)
 const showTagModal = ref(false)
 const showMapModal = ref(false)
 
+const showImageModal = ref(false)
+const modalImages = ref([])
+
 const placeholder = 'https://images.unsplash.com/photo-1597290282695-edc43d0e7129?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8YmFyfGVufDB8fDB8fHww'
 const placeholder2 = 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8Y29ja3RhaWx8ZW58MHx8MHx8fDA%3D'
 
+const isLoading = ref(true)
+
 onMounted(async () => {
   try {
+    // — логин, получение токена и создание authAxios (то, что у тебя уже есть) —
     const params = new URLSearchParams()
     params.append('username', 'user')
     params.append('password', 'user')
-
-    const loginResponse = await axios.post('/api/auth/login', params)
-    const token = loginResponse.data.access_token
+    const loginRes = await axios.post('/api/auth/login', params)
+    const token = loginRes.data.access_token
     localStorage.setItem('access_token', token)
 
     const authAxios = axios.create({
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+      headers: { Authorization: `Bearer ${token}` }
     })
 
-    const favoritesResponse = await authAxios.get('/api/users/favorites/bars/')
-    const favoriteIds = favoritesResponse.data.map(bar => bar.id)
+    // список id избранных баров
+    const favRes = await authAxios.get('/api/users/favorites/bars/')
+    const favoriteIds = favRes.data.map(b => b.id)
 
-    const barsResponse = await authAxios.get('/api/bars/')
-    const barsData = barsResponse.data
+    // получаем сами бары
+    const barsRes = await authAxios.get('/api/bars/')
+    const barsData = barsRes.data
 
-    // Получаем коктейли по каждому бару
     const barsWithCocktails = await Promise.all(
-      barsData.map(async (bar) => {
-        const cocktailsResponse = await authAxios.get(`/api/bars/${bar.id}/cocktails/`)
+      barsData.map(async bar => {
+        // коктейли бара
+        const cocktailsRes = await authAxios.get(`/api/bars/${bar.id}/cocktails/`)
+        const rawCocktails = cocktailsRes.data
+
+        // для каждого коктейля галерея
+        const cocktailsWithGallery = await Promise.all(
+          rawCocktails.map(async cocktail => {
+            const galRes = await authAxios.get(
+              `/api/cocktails/${cocktail.id}/gallery`
+            )
+            return {
+              ...cocktail,
+              gallery: galRes.data
+            }
+          })
+        )
+
         return {
           ...bar,
           isFavorite: favoriteIds.includes(bar.id),
-          cocktails: cocktailsResponse.data
+          cocktails: cocktailsWithGallery
         }
       })
     )
 
     bars.value = barsWithCocktails
-  } catch (error) {
-    console.error('Ошибка при загрузке данных:', error)
+  } catch (err) {
+    console.error('Ошибка при загрузке данных:', err)
+  } finally {
+    isLoading.value = false
   }
+})
+
+const filteredBars = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) return bars.value
+  return bars.value.filter(bar =>
+    bar.name.toLowerCase().includes(q)
+  )
 })
 
 function toggleCityDropdown() {
@@ -202,6 +283,19 @@ function toggleFavorite(bar) {
       .catch(err => console.error(err))
   }
 }
+
+function openImageModal(gallery) {
+  modalImages.value = gallery.length ? gallery : [{ image_url: placeholder }]
+  showImageModal.value = true
+}
+
+function closeImageModal() {
+  showImageModal.value = false
+}
+
+function goToBar(id) {
+  router.push({ name: 'BarDetailed', params: { id } })
+}
 </script>
 
 <style scoped>
@@ -211,10 +305,9 @@ function toggleFavorite(bar) {
   color: #fff;
   font-family: sans-serif;
   max-width: 352px;
-  user-select: none; 
 }
 .search-bar {
-  margin-bottom: 16px;
+  margin-bottom: 0px;
 }
 .search-input {
   width: 100%;
@@ -242,11 +335,18 @@ function toggleFavorite(bar) {
   border-radius: 6px;
   cursor: pointer;
 }
+.btn-icon {
+    width: 24px; 
+    height: 24px; 
+    object-fit: contain;
+}
 .filters {
-  margin-top: 8px;
+  margin-top: 4px;
+  margin-bottom: 8px;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+
 }
 .tags {
     display: flex;
@@ -290,7 +390,7 @@ function toggleFavorite(bar) {
   background: #222222;
   border-radius: 12px;
   overflow: hidden;
-  height: 340px !important;
+  height: 344px !important;
   text-align: left;
 }
 .bar-img-main {
@@ -302,11 +402,13 @@ function toggleFavorite(bar) {
   margin: 8px 8px;
   border-top-left-radius: 8px;
   border-bottom-left-radius: 8px;
+  cursor: pointer;
 }
 .bar-img-sec {
     /* min-width: 117px; */
     width: 100%;
     height: 66px;
+    cursor: pointer;
 }
 .bar-info {
   padding: 12px;
@@ -342,9 +444,10 @@ function toggleFavorite(bar) {
   font-size: 24px;
   cursor: pointer;
   padding: 4px 0;
-  height: 24px;
-  line-height: 12px;
-  margin-right: 8px;
+  height: 32px;
+  /* line-height: 12px; */
+  margin-right: 2px;
+  margin-top: -8px;
 }
 .favorite-btn:hover {
   opacity: 0.8;
@@ -399,6 +502,7 @@ function toggleFavorite(bar) {
 /* Выбор города */
 .city-selector {
   margin: 6px 0;
+  height: 24px;
   color: #ccc;
   cursor: pointer;
   position: relative;
@@ -472,5 +576,78 @@ function toggleFavorite(bar) {
   text-align: center;
   width: 90%;
   max-width: 500px;
+}
+
+/* Попап фото */
+.image-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+.image-modal-content {
+  position: relative;
+  width: 370px;
+  /* max-width: 900px; */
+  max-height: 90%;
+  background: #1e1e1e;
+  border-radius: 12px;
+  overflow: auto;
+  padding: 16px;
+}
+.close-btn {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 28px;
+  cursor: pointer;
+  z-index: 999;
+}
+
+.masonry-gallery {
+  column-count: 2;
+  column-gap: 8px;
+}
+.masonry-gallery img {
+  display: block;
+  width: 100%;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  object-fit: cover;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.masonry-gallery img:hover {
+  transform: scale(1.03);
+  z-index: 2;
+}
+
+/* ЛОАДЕР */
+.loader-container {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #181818; /* фон под спиннером */
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(255,255,255,0.2);
+  border-top-color: #FF7700;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 </style>
