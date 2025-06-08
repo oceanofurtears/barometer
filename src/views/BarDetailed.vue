@@ -36,7 +36,7 @@
                                 />
                             </button>
                             <div class="rating">
-                                <img src="https://i.imgur.com/qx5kdDU.png" alt="Настройки" class="btn-icon" style="width: 18px; height: 18px; margin-top: 3px;"/> 
+                                <img src="https://i.imgur.com/qx5kdDU.png" alt="Настройки" class="btn-icon" style="width: 18px; height: 18px; margin-top: 0px;"/> 
                                 <div style="margin-left: 4px; margin-top: 3px;">{{ bar.rating ?? '—' }}</div>
                             </div>
                         </div>
@@ -46,26 +46,56 @@
                         {{ bar.description }}
                     </p>
 
-                    <!-- Горизонтальная галерея коктейлей -->
-                    <!-- <div class="cocktail-gallery" v-if="bar.cocktails?.length">
-                        <div class="cocktail-item" v-for="(cocktail, index) in bar.cocktails.slice(0, 6)" :key="cocktail.id">
-                            <img :src="cocktail.gallery?.[0]?.image_url || placeholder2" alt="Cocktail" />
-                            <div
-                            v-if="index === 5 && bar.cocktails.length > 6"
-                            class="cocktail-overlay"
-                            >
-                            +{{ bar.cocktails.length - 6 }}
-                            </div>
-                        </div>
-                    </div> -->
-
                     <div class="tags">
                         <span v-for="tag in bar.tags" :key="tag.id" class="tag">{{ tag.name }}</span>
                     </div>
-                    <div class="footer">
-                        <span class="address">📍 {{ bar.address }}</span>
-                        <span class="phone">📞 {{ bar.phone }}</span>
+
+                    <div class="action-buttons">
+                        <button class="btn-map" @click="showOnMap(bar)">
+                            Показать на карте
+                            <img src="https://i.imgur.com/PCYuXD9.png" alt="map" class="btn-icon-sec" />
+                        </button>
+                        <button class="btn-book" @click="bookTable(bar)">
+                            Забронировать стол
+                            <img src="https://i.imgur.com/Dh7WIsX.png" alt="book" class="btn-icon-sec" />
+                        </button>
                     </div>
+
+                    <div class="cocktail-section">
+                        <div class="section-title">Барная карта</div>
+                        <div class="cocktail-grid">
+                            <div
+                                v-for="cocktail in bar.cocktails"
+                                :key="cocktail.id"
+                                class="cocktail-card"
+                                @click="goToCocktail(cocktail.id)"
+                            >
+                                <img
+                                    :src="cocktail.gallery[0]?.image_url || placeholder2"
+                                    alt="Cocktail image"
+                                />
+                                <h3>{{ cocktail.name }}</h3>
+                                <p>{{ cocktail.description || cocktail.ingredients }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="reviews-section">
+                        <h2 class="section-title">Отзывы</h2>
+                        <div class="reviews-list">
+                            <div v-for="review in reviews" :key="review.id" class="review-card">
+                                <div class="review-header">
+                                    <span class="review-user">{{ review.username || 'User' }}</span>
+                                    <div class="review-rating">
+                                        <img src="https://i.imgur.com/qx5kdDU.png" alt="Настройки" class="btn-icon" style="width: 18px; height: 18px; margin-top: -1px; margin-right: 4px;"/> 
+                                        {{ review.rating }}
+                                    </div>
+                                </div>
+                                <p class="review-text">{{ review.text }}</p>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -95,11 +125,16 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import axios from 'axios'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter  } from 'vue-router'
 
 const route = useRoute()
+const router = useRouter()
 const bar = ref(null)
-const placeholder2 = 'https://via.placeholder.com/200?text=Cocktail'
+const placeholder = 'https://images.unsplash.com/photo-1597290282695-edc43d0e7129?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8YmFyfGVufDB8fDB8fHww'
+const placeholder2 = 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8Y29ja3RhaWx8ZW58MHx8MHx8fDA%3D'
+
+const reviews = ref([])
+const users = ref([])
 
 const modalImages = ref([])
 const showImageModal = ref(false)
@@ -136,7 +171,28 @@ onMounted(async () => {
       })
     )
 
+    // 5) Отзывы бара
+    const reviewsRes = await authAxios.get(`/api/bars/${id}/reviews/`)
+    const rawReviews = reviewsRes.data
+
+    // 6) Для каждого отзыва подтягиваем имя автора
+    const reviewsWithUser = await Promise.all(
+      rawReviews.map(async r => {
+        try {
+          const userRes = await authAxios.get(`/api/users/${r.user_id}`)
+          return {
+            ...r,
+            username: userRes.data.username
+          }
+        } catch {
+          return r // если по каким-то причинам не удалось — оставим user_id
+        }
+      })
+    )
+
     bar.value = barData
+    reviews.value = reviewsWithUser
+
   } catch (err) {
     console.error(err)
   }
@@ -149,6 +205,23 @@ function openImageModal(gallery) {
 
 function closeImageModal() {
   showImageModal.value = false
+}
+
+function getUsername(review) {
+  // возьмём заранее сохранённое имя, если есть
+  return review.username || `User #${review.user_id}`
+}
+
+function showOnMap(bar) {
+  console.log('Show on map', bar.address)
+}
+
+function bookTable(bar) {
+  console.log('Book a table at', bar.name)
+}
+
+function goToCocktail(id) {
+  router.push({ name: 'CocktailDetailed', params: { id } })
 }
 </script>
 
@@ -183,7 +256,6 @@ function closeImageModal() {
     height: 24px; 
     object-fit: contain;
 }
-
 .bar-card {
   background: #2a2a2a;
   border-radius: 12px;
@@ -193,6 +265,18 @@ function closeImageModal() {
   text-align: left;
   margin-bottom: 24px;
   height: calc(100vh - 24px);
+  overflow-y: scroll;
+}
+.bar-card::-webkit-scrollbar {
+  height: 2px;
+  width: 2px;
+}
+.bar-card::-webkit-scrollbar-track {
+  background: transparent;
+}
+.bar-card::-webkit-scrollbar-thumb {
+  background-color: #FF7700;
+  border-radius: 4px;
 }
 .bar-images {
   display: flex;
@@ -279,14 +363,6 @@ function closeImageModal() {
 .favorite-btn:hover {
   opacity: 0.8;
 }
-.footer {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 12px;
-  font-size: 13px;
-  opacity: 0.8;
-  color: #FF7700;
-}
 .tags {
     display: flex;
     flex-direction: row;
@@ -304,6 +380,132 @@ function closeImageModal() {
   border-radius: 8px;
   font-size: 14px;
   white-space: nowrap;
+}
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  margin: 4px 0;
+}
+.action-buttons button {
+  flex: 1;
+  display: inline-flex;
+  height: 24px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px;
+  background: #FF7700;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.action-buttons button:hover {
+  background: #e66f00;
+}
+.btn-icon-sec {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+/* Коктейли */
+.cocktail-section {
+  margin-top: 12px;
+}
+.section-title {
+  font-size: 14px;
+  color: #fff;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+/* Грид с карточками коктейлей */
+.cocktail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+/* Сама карточка */
+.cocktail-card {
+  background: #333438;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.cocktail-card:hover {
+  transform: translateY(-4px);
+}
+
+/* Изображение */
+.cocktail-card img {
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+}
+
+/* Название */
+.cocktail-card h3 {
+  margin: 8px;
+  font-size: 14px;
+  color: #FF7700;
+}
+
+/* Описание */
+.cocktail-card p {
+  margin: 0 8px 8px;
+  font-size: 12px;
+  line-height: 1.3;
+  color: #ccc;
+}
+
+/* Отзывы */
+.reviews-section {
+  margin-top: 12px;
+}
+.reviews-section .section-title {
+  font-size: 18px;
+  color: #fff;
+  margin-bottom: 12px;
+}
+
+/* Список карточек отзывов */
+.reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Одна карточка отзыва */
+.review-card {
+  background: #333438;
+  border-radius: 8px;
+  padding: 12px;
+}
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.review-user {
+  font-weight: bold;
+  color: #FF7700;
+}
+.review-rating {
+    display: flex;
+  font-size: 16px;
+}
+.review-text {
+  font-size: 14px;
+  color: #ccc;
+  line-height: 1.4;
+  margin: 0;
 }
 
 /* Галерея */
@@ -325,6 +527,17 @@ function closeImageModal() {
   border-radius: 12px;
   overflow: auto;
   padding: 16px;
+}
+.image-modal-content::-webkit-scrollbar {
+  height: 2px;
+  width: 2px;
+}
+.image-modal-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+.image-modal-content::-webkit-scrollbar-thumb {
+  background-color: #FF7700;
+  border-radius: 4px;
 }
 .close-btn {
   position: absolute;

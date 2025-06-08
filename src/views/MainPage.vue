@@ -457,7 +457,7 @@ function goToBar(id) {
 .cocktail-gallery {
   display: flex;
   overflow-x: auto;
-  gap: 8px;
+  gap: 7.5px;
   margin-top: 12px;
   padding-bottom: 4px;
   scrollbar-width: none;
@@ -597,6 +597,17 @@ function goToBar(id) {
   border-radius: 12px;
   overflow: auto;
   padding: 16px;
+}
+.image-modal-content::-webkit-scrollbar {
+  height: 2px;
+  width: 2px;
+}
+.image-modal-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+.image-modal-content::-webkit-scrollbar-thumb {
+  background-color: #FF7700;
+  border-radius: 4px;
 }
 .close-btn {
   position: absolute;
