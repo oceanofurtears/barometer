@@ -37,7 +37,7 @@ const isFavorites = route.path === '/favorites'
   align-items: center;
   border-top-left-radius: 24px;
   border-top-right-radius: 24px;
-  z-index: 100;
+  z-index: 7;
   padding: 8px;
 }
 
