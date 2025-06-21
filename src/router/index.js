@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import MainPage from '../views/MainPage.vue'
 import BarDetailed from '../views/BarDetailed.vue'
 import CocktailDetailed from '@/views/CocktailDetailed.vue'
+import FavouritesPage from '@/views/FavouritesPage.vue'
 
 const routes = [
   {
@@ -21,6 +22,11 @@ const routes = [
     name: 'CocktailDetailed',
     component: CocktailDetailed,
     props: true
+  },
+  {
+    path: '/favorites',
+    name: 'FavouritesPage',
+    component: () => import('@/views/FavouritesPage.vue')
   }
 ]
 

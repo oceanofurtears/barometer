@@ -17,17 +17,20 @@
                         :src="gallery[0]?.image_url || placeholder2"
                         alt="Cocktail main"
                         class="img-main"
+                        @click="openImageModal(gallery)"
                     />
                     <div class="img-side-wrapper">
                         <img
                             :src="gallery[1]?.image_url || placeholder2"
                             alt="Cocktail side 1"
                             class="img-side img-side-top"
+                            @click="openImageModal(gallery)"
                         />
                         <img
                             :src="gallery[2]?.image_url || placeholder2"
                             alt="Cocktail side 2"
                             class="img-side img-side-bottom"
+                            @click="openImageModal(gallery)"
                         />
                     </div>
                 </div>
@@ -88,9 +91,27 @@
         </div>
     </div>
   </div>
+
+    <div v-if="showImageModal" class="image-modal-overlay" @click.self="closeImageModal">
+        <div class="image-modal-content">
+            <button class="close-btn" @click="closeImageModal">×</button>
+            <div class="masonry-gallery">
+                <img
+                    v-for="(img, i) in modalImages"
+                    :key="i"
+                    :src="img.image_url"
+                    alt="photo"
+                />
+            </div>
+        </div>
+    </div>
+
+    <BottomNav />
 </template>
 
 <script setup>
+import BottomNav from '@/components/BottomNav.vue'
+
 import { ref, onMounted, computed  } from 'vue'
 import axios from 'axios'
 import { useRoute } from 'vue-router'
@@ -101,6 +122,9 @@ const gallery = ref([])
 const isLoading = ref(true)
 const reviews = ref([]) 
 const users = ref([]) 
+
+const showImageModal = ref(false)
+const modalImages     = ref([])
 
 const placeholder2 = 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8Y29ja3RhaWx8ZW58MHx8MHx8fDA%3D'
 
@@ -134,6 +158,14 @@ const youtubeEmbedUrl = computed(() => {
     ? `https://www.youtube.com/embed/${id}`
     : ''
 })
+
+function openImageModal(images) {
+  modalImages.value = images.length ? images : [{ image_url: placeholder2 }]
+  showImageModal.value = true
+}
+function closeImageModal() {
+  showImageModal.value = false
+}
 
 onMounted(async () => {
   try {
@@ -227,8 +259,8 @@ onMounted(async () => {
 
 .back-btn {
   position: absolute;
-  top: -8px;
-  left: -8px;
+  top: -4px;
+  left: -4px;
   z-index: 10;
   width: 36px;
   height: 36px;
@@ -263,7 +295,7 @@ onMounted(async () => {
   padding: 12px;
   color: #fff;
   text-align: left;
-  max-height: calc(100vh - 40px);
+  max-height: calc(100vh - 84px);
   overflow-y: scroll;
 }
 .cocktail-card::-webkit-scrollbar {
@@ -339,6 +371,7 @@ onMounted(async () => {
   display: flex;
   gap: 4px;
   margin-bottom: 16px;
+  align-items: stretch; /* важно: растягиваем детей по высоте */
 }
 .img-main {
   flex: 2;
@@ -346,6 +379,8 @@ onMounted(async () => {
   object-fit: cover;
   border-top-left-radius: 8px;
   border-bottom-left-radius: 8px;
+  cursor: pointer;
+  width: 232px;
 }
 .img-side-wrapper {
   flex: 1;
@@ -354,9 +389,10 @@ onMounted(async () => {
   gap: 4px;
 }
 .img-side {
+  flex: 1;
   width: 100%;
-  height: 86px;
   object-fit: cover;
+  cursor: pointer;
 }
 .img-side-top {
   border-top-right-radius: 8px;
@@ -373,15 +409,15 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   column-gap: 16px;
-  row-gap: 4px;          /* <-- уменьшили расстояние между строками */
+  row-gap: 4px;
 }
 
 .ingredients-list li {
   position: relative;
-  margin: 0;             /* отменили внешние отступы */
-  padding-left: 12px;    /* место под буллет */
+  margin: 0;
+  padding-left: 12px;
   font-size: 12px;
-  line-height: 1.2;      /* <-- пошуще строки друг к другу */
+  line-height: 1.2;
   color: #fff;
 }
 
@@ -425,7 +461,6 @@ onMounted(async () => {
 .video-wrapper {
   margin: 16px 0;
   width: 100%;
-  /* сохраняем соотношение сторон 16:9 */
   position: relative;
   padding-top: 56.25%;
 }
@@ -489,5 +524,66 @@ onMounted(async () => {
   color: #ccc;
   line-height: 1.4;
   margin: 0;
+}
+
+/* галерея */
+.image-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+.image-modal-content {
+  position: relative;
+  width: 370px;
+  max-width: 600px;
+  max-height: 90%;
+  background: #1e1e1e;
+  border-radius: 12px;
+  overflow: auto;
+  padding: 16px;
+}
+.image-modal-content::-webkit-scrollbar {
+  height: 2px;
+  width: 2px;
+}
+.image-modal-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+.image-modal-content::-webkit-scrollbar-thumb {
+  background-color: #FF7700;
+  border-radius: 4px;
+}
+.close-btn {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+/* Masonry-галерея */
+.masonry-gallery {
+  column-count: 2;
+  column-gap: 8px;
+}
+.masonry-gallery img {
+  display: block;
+  width: 100%;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  object-fit: cover;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.masonry-gallery img:hover {
+  transform: scale(1.03);
 }
 </style>

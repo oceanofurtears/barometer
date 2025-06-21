@@ -120,9 +120,13 @@
             </div>
         </div>
     </div>
+
+    <BottomNav />
 </template>
 
 <script setup>
+import BottomNav from '@/components/BottomNav.vue'
+
 import { onMounted, ref } from 'vue'
 import axios from 'axios'
 import { useRoute, useRouter  } from 'vue-router'
@@ -223,6 +227,34 @@ function bookTable(bar) {
 function goToCocktail(id) {
   router.push({ name: 'CocktailDetailed', params: { id } })
 }
+
+function toggleFavorite(bar) {
+  const token = localStorage.getItem('access_token')
+  if (!token) return
+
+  const url = `/api/bars/${bar.id}/favorites/`
+  const config = {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  }
+
+  if (bar.isFavorite) {
+    // удалить из избранного
+    axios.delete(url, config)
+      .then(() => {
+        bar.isFavorite = false
+      })
+      .catch(err => console.error(err))
+  } else {
+    // добавить в избранное
+    axios.post(url, null, config)
+      .then(() => {
+        bar.isFavorite = true
+      })
+      .catch(err => console.error(err))
+  }
+}
 </script>
 
 <style scoped>
@@ -233,6 +265,7 @@ function goToCocktail(id) {
   color: #fff;
   font-family: sans-serif;
   max-width: 352px;
+  padding-top: 8px;
 }
 .back-btn {
   position: absolute;
@@ -264,7 +297,7 @@ function goToCocktail(id) {
   cursor: default;
   text-align: left;
   margin-bottom: 24px;
-  height: calc(100vh - 24px);
+  height: calc(100vh - 60px);
   overflow-y: scroll;
 }
 .bar-card::-webkit-scrollbar {

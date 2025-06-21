@@ -151,10 +151,14 @@
             </div>
         </div>
     </div>
+
+    <BottomNav />
   
 </template>
 
 <script setup>
+import BottomNav from '@/components/BottomNav.vue'
+
 import { onMounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
@@ -165,7 +169,9 @@ const bars = ref([])
 const searchQuery = ref('')
 const favoriteIds = ref([])
 const selectedTags = ref([])
-const allTags = ['вино', 'коктейли', 'диджей', 'панорама', 'craft', 'classic', 'лонг', 'шот', 'пиво']
+const allTags = ['вино', 'живая музыка', 'диджей', 'пиво', 'авторское', 
+                'уют', 'вечеринки', 'тишина', 'свидание', 'для компании', 
+                'шумно', 'караоке']
 
 const cities = ['Ростов-на-Дону', 'Москва', 'Санкт-Петербург', 'Казань', 'Новосибирск']
 const selectedCity = ref(cities[0])
@@ -240,11 +246,15 @@ onMounted(async () => {
 })
 
 const filteredBars = computed(() => {
-  const q = searchQuery.value.trim().toLowerCase()
-  if (!q) return bars.value
-  return bars.value.filter(bar =>
-    bar.name.toLowerCase().includes(q)
-  )
+  return bars.value.filter(bar => {
+    const matchesSearch = bar.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+
+    const matchesTags = selectedTags.value.length === 0 || selectedTags.value.every(tag =>
+      bar.tags?.some(t => t.name === tag)
+    )
+
+    return matchesSearch && matchesTags
+  })
 })
 
 function toggleCityDropdown() {
@@ -367,7 +377,7 @@ function goToBar(id) {
   white-space: nowrap;
 }
 .bar-container {
-    height: calc(100vh - 112px);
+    height: calc(100vh - 142px);
     overflow-y: scroll;
 }
 .bar-container::-webkit-scrollbar {
@@ -646,7 +656,7 @@ function goToBar(id) {
   display: flex;
   justify-content: center;
   align-items: center;
-  background: #181818; /* фон под спиннером */
+  background: #181818;
 }
 
 .spinner {
